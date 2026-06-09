@@ -1,0 +1,60 @@
+{
+  "model_name": "icu_los_classifier",
+  "created_at_utc": "2026-06-09T19:44:35.885681+00:00",
+  "task": "three-class ICU length-of-stay classification",
+  "target_definition": {
+    "0": "LOS < 2 days",
+    "1": "2 <= LOS <= 7 days",
+    "2": "LOS > 7 days"
+  },
+  "feature_window": "ICU admission through first 24 hours only",
+  "split_policy": "patient-level split by subject_id with explicit overlap assertion",
+  "class_imbalance": "balanced sample weights fitted on training split only",
+  "model_path": "/Users/brandonwu/Documents/ICU_LOS_Survival_Analysis/models/icu_los_classifier.joblib",
+  "train_rows": 66151,
+  "validation_rows": 14036,
+  "test_rows": 14257,
+  "feature_count": 380,
+  "numeric_feature_count": 368,
+  "categorical_feature_count": 12,
+  "test_metrics": {
+    "macro_f1": 0.5902319097728024,
+    "weighted_f1": 0.6402985568507089,
+    "balanced_accuracy": 0.6166020942176125,
+    "roc_auc_ovr_macro": 0.8139923137268302,
+    "roc_auc_ovr_weighted": 0.8070580784542051,
+    "classification_report": {
+      "0": {
+        "precision": 0.7924961715160797,
+        "recall": 0.7144829490542592,
+        "f1-score": 0.7514702679154868,
+        "support": 7243.0
+      },
+      "1": {
+        "precision": 0.5498830865159782,
+        "recall": 0.5314500941619585,
+        "f1-score": 0.5405094809423482,
+        "support": 5310.0
+      },
+      "2": {
+        "precision": 0.3965317919075145,
+        "recall": 0.6038732394366197,
+        "f1-score": 0.47871598046057223,
+        "support": 1704.0
+      },
+      "accuracy": 0.6330925159570737,
+      "macro avg": {
+        "precision": 0.579637016646524,
+        "recall": 0.6166020942176125,
+        "f1-score": 0.5902319097728024,
+        "support": 14257.0
+      },
+      "weighted avg": {
+        "precision": 0.6548095064249992,
+        "recall": 0.6330925159570737,
+        "f1-score": 0.6402985568507089,
+        "support": 14257.0
+      }
+    }
+  }
+}

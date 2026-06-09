@@ -1,44 +1,59 @@
-# ICU Length of Stay Survival Analysis
+# ICU Length of Stay Classification
 
-This capstone project predicts ICU length of stay from early ICU information, including demographics, admission context, first-day vital signs, first-day lab measurements, and first-day input events. The project compares survival-style accelerated failure time models with a log-transformed ICU length-of-stay gradient boosting model.
+This capstone project now predicts ICU length-of-stay category from information available at ICU admission through the first 24 hours only.
 
-The original analysis uses restricted ICU data, so the public repository includes a small synthetic sample under `data/sample/` that can run the project demo notebook in under 1 minute.
+Target classes:
 
-## Repository Contents
+| Class | Definition |
+| --- | --- |
+| `0` | ICU LOS `< 2` days |
+| `1` | ICU LOS `2` through `7` days, inclusive |
+| `2` | ICU LOS `> 7` days |
+
+The previous survival-analysis and log-LOS regression work is preserved under `legacy_survival/`.
+
+## Repository Structure
 
 | Path | Description |
 | --- | --- |
-| `README.md` | Project overview, file descriptions, setup instructions, and run instructions. |
-| `requirements.txt` | Python packages needed to run the demo notebook and analysis notebooks. |
-| `config.py` | Shared path configuration for local raw data, processed data, and model output directories. |
-| `scripts/train_best_model.py` | Trains the best-performing gradient boosting log-LOS model and saves it to `models/`. |
-| `models/.gitkeep` | Keeps the exposed `models/` directory in the repository before a trained model is generated. |
-| `project.html` | Static HTML version of the project demo with rendered outputs. |
-| `data/sample/README.md` | Description of the synthetic sample data files. |
-| `data/sample/demo_predictions.csv` | Synthetic patient-level examples with observed ICU LOS, predicted ICU LOS, and prediction error. |
-| `data/sample/demo_model_metrics.csv` | Representative final-model metrics used by the demo notebook. |
-| `data/sample/demo_feature_importance.csv` | High-level feature group importance summary used for interpretation. |
-| `data/sample/demo_subgroup_error.csv` | Care-unit subgroup error summary generated from the synthetic demo predictions. |
-| `notebooks/project_demo.ipynb` | Fast public demo notebook. It imports the synthetic sample data and demonstrates model metrics, example predictions, error analysis, and interpretation. |
-| `notebooks/01_icustays_data_cleaning.ipynb` | Cleans ICU stay, admission, and patient tables. |
-| `notebooks/02_icustays_feature_engineering.ipynb` | Creates ICU stay demographic, admission, timing, and care-unit features. |
-| `notebooks/03_chartevents_data_cleaning.ipynb` | Cleans chart event vital-sign data. |
-| `notebooks/04_chartevents_feature_engineering.ipynb` | Creates first-24-hour vital-sign summary features. |
-| `notebooks/05_labevents_data_cleaning.ipynb` | Cleans lab event data. |
-| `notebooks/06_labevents_feature_engineering.ipynb` | Creates first-24-hour lab summary and missingness features. |
-| `notebooks/07_inputevents_data_cleaning.ipynb` | Cleans ICU input event data. |
-| `notebooks/08_inputevents_feature_engineering.ipynb` | Creates first-24-hour medication, fluid, duration, and dose features. |
-| `notebooks/09_merge_modeling_dataset.ipynb` | Merges feature tables into the final modeling dataset. |
-| `notebooks/10_model_readiness_assumptions.ipynb` | Checks missingness, correlations, predictor readiness, and train/test split assumptions. |
-| `notebooks/11_survival_modeling.ipynb` | Fits and compares survival-style AFT models. |
-| `notebooks/12_lognormal_aft_modeling.ipynb` | Fits the selected log-normal AFT model and exports metrics/predictions. |
-| `notebooks/13_log_los_gradient_boosting.ipynb` | Fits the log-transformed ICU LOS gradient boosting model and exports metrics/predictions. |
-| `notebooks/14_data_sanity_model_diagnostics.ipynb` | Runs final sanity checks, residual diagnostics, tail checks, and subgroup error analysis. |
-| `notebooks/15_original_data_eda.ipynb` | Summarizes the original ICU cohort, length-of-stay distribution, and cohort composition. |
+| `src/data/` | Target creation, patient-level splitting, first-24-hour validation, and leakage checks. |
+| `src/features/` | Feature builders for admission-time and first-24-hour ICU data. |
+| `src/models/` | Scikit-learn preprocessing and classifier pipeline. |
+| `src/evaluation/` | Macro/weighted F1, balanced accuracy, per-class metrics, confusion matrix, and ROC AUC helpers. |
+| `scripts/train_best_model.py` | Main training CLI for the three-class classifier. |
+| `tests/` | Lightweight sanity checks for target labels, split integrity, leakage columns, first-24-hour timestamps, and preprocessing column consistency. |
+| `notebooks/project.ipynb` | Fast public demo that loads synthetic sample data and the saved model artifact. |
+| `data/sample/` | Synthetic demo data. No restricted patient records are included. |
+| `models/` | Saved model artifacts and metadata. |
+| `reports/` | Classification metrics, confusion matrices, split files, and predictions. |
+| `legacy_survival/` | Archived survival/log-LOS notebooks, script, and prior model artifacts. |
+
+## Leakage Controls
+
+The active pipeline explicitly:
+
+- Splits by `subject_id`, so all ICU stays for a patient are assigned to exactly one of train, validation, or test.
+- Runs an assertion that no `subject_id` appears in more than one split.
+- Excludes outcome/future-information columns from features, including `los`, `outtime`, `dischtime`, `deathtime`, `dod`, `hospital_expire_flag`, `event_observed`, `duration`, and `last_careunit`.
+- Uses `first_careunit`, not `last_careunit`.
+- Uses admission-time values and first-24-hour aggregate features only.
+- Fits imputation, scaling, one-hot encoding, and model parameters only on the training split.
+- Handles imbalance with balanced sample weights computed on the training labels only.
+
+## Feature Sources
+
+The training script can reuse existing notebook-generated processed feature tables when `data/processed/modeling_dataset.parquet` exists. Those features are filtered to remove known leakage columns and prior survival/regression targets.
+
+The raw-data feature path uses:
+
+- `icustays`: ICU identifiers, `intime`, `first_careunit`, and LOS target creation.
+- `admissions`: admission type/location, insurance, language, marital status, race, and hospital-to-ICU timing from `admittime`.
+- `patients`: gender and anchor age.
+- Optional first-24-hour numeric summaries from `chartevents` and `labevents` when present.
+
+All event summaries are filtered to ICU hour `0` through `24` before aggregation.
 
 ## Setup
-
-Create and activate a Python environment, then install dependencies:
 
 ```bash
 python3 -m venv .venv
@@ -46,42 +61,71 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## Run the Public Demo
-
-The public demo uses only the synthetic files in `data/sample/` and should run in under 1 minute:
+## Run Tests
 
 ```bash
-jupyter notebook notebooks/project_demo.ipynb
+python -m unittest discover -s tests -v
 ```
 
-Run all cells from top to bottom. The same rendered results are also saved in:
+## Train The Classifier
 
-```text
-project.html
-```
-
-## Train and Save the Best Model
-
-After running notebooks `01` through `10` to create the processed modeling artifacts, train the best-performing model with:
+Use existing processed first-24-hour feature artifacts when available:
 
 ```bash
 python scripts/train_best_model.py
 ```
 
-This saves the fitted scikit-learn pipeline and metadata to:
+Build features directly from `data/raw/` instead:
 
-```text
-models/hist_gradient_boosting_log_los.joblib
-models/hist_gradient_boosting_log_los_metadata.json
+```bash
+python scripts/train_best_model.py --from-raw
 ```
 
-The saved pipeline includes preprocessing, imputation, one-hot encoding, and the histogram gradient boosting regressor. It predicts `log1p(ICU LOS)` internally; convert predictions back to days with `numpy.expm1`.
+Create a tiny synthetic demo model artifact:
 
-## Full Pipeline With Restricted Data
+```bash
+python scripts/train_best_model.py --sample
+```
 
-The full analysis requires access to the original ICU source tables. These files are intentionally not included in the repository.
+The active model artifact is saved to:
 
-Place the restricted source files in `data/raw/` with these names:
+```text
+models/icu_los_classifier.joblib
+models/icu_los_classifier_metadata.json
+```
+
+Reports are saved under:
+
+```text
+reports/classification/
+```
+
+Metrics include macro F1, weighted F1, balanced accuracy, per-class precision/recall/F1/support, confusion matrix, and multiclass ROC AUC when probabilities are available.
+
+## Run The Demo Notebook
+
+The public demo uses only synthetic data and should run in under 1 minute:
+
+```bash
+jupyter notebook notebooks/project.ipynb
+```
+
+The demo loads:
+
+```text
+data/sample/icu_los_classification_sample.csv
+models/icu_los_classifier_sample.joblib
+```
+
+If the model artifact is missing, generate it with:
+
+```bash
+python scripts/train_best_model.py --sample
+```
+
+## Restricted MIMIC-IV Data
+
+The full project requires restricted MIMIC-IV ICU source tables. They are not included in this repository and must be obtained externally through the official PhysioNet credentialing and data-use process. After approval, place source files in `data/raw/` using names such as:
 
 ```text
 admissions.csv
@@ -91,21 +135,11 @@ d_labitems.csv
 icustays.csv
 inputevents.csv
 labevents.csv.gz
+outputevents.csv.gz
 patients.csv
+prescriptions.csv.gz
+procedureevents.csv.gz
+radiology.csv.gz
 ```
 
-Then run the notebooks in numeric order:
-
-```text
-01 -> 02 -> 03 -> 04 -> 05 -> 06 -> 07 -> 08 -> 09 -> 10 -> 11 -> 12 -> 13 -> 14 -> 15
-```
-
-The cleaning and feature notebooks write intermediate files to `data/processed/`. The modeling notebooks write final metrics, predictions, and diagnostics to `data/processed/model_outputs/`. Because the source data are restricted and the processed files can be large, `data/` is ignored by git except for the small synthetic demo sample.
-
-## Final Result
-
-The final comparison showed that the log-transformed ICU length-of-stay gradient boosting model performed best among the evaluated models, with stronger discrimination and slightly lower mean absolute error than the log-normal AFT model. Long ICU stays remained the hardest cases to predict from first-day data alone, so the final analysis emphasizes error distributions, subgroup diagnostics, and prediction-tail checks rather than only average performance.
-
-## Notes On Data Privacy
-
-The included `data/sample/` files are synthetic. They are designed to demonstrate the notebook workflow and expected outputs without exposing restricted patient-level ICU records.
+Only add new sources if the resulting features can be computed from ICU admission through hour 24 and do not reveal discharge timing, death timing, final LOS, or events after hour 24.
