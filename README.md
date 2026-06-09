@@ -12,50 +12,46 @@ Target classes:
 
 ## Repository Structure
 
-| Path | Description |
-| --- | --- |
-| `src/data/` | Target creation, patient-level splitting, first-24-hour validation, and leakage checks. |
-| `src/features/` | Feature builders for admission-time and first-24-hour ICU data. |
-| `src/models/` | Scikit-learn preprocessing and classifier pipeline. |
-| `src/evaluation/` | Macro/weighted F1, balanced accuracy, per-class metrics, confusion matrix, and ROC AUC helpers. |
-| `scripts/train_best_model.py` | Main training CLI for the three-class classifier. |
-| `tests/` | Lightweight sanity checks for target labels, split integrity, leakage columns, first-24-hour timestamps, and preprocessing column consistency. |
-| `notebooks/project.ipynb` | Fast public demo that loads synthetic sample data and the saved model artifact. |
-| `data/sample/` | Synthetic demo data. No restricted patient records are included. |
-| `models/` | Saved model artifacts and metadata. |
-| `reports/` | Classification metrics, confusion matrices, split files, and predictions. |
+```text
+.
+├── src/
+│   ├── data/          # target labels, patient-level splits, leakage checks
+│   ├── features/      # first-24-hour raw and processed feature builders
+│   ├── models/        # preprocessing, classifier, and baseline pipelines
+│   └── evaluation/    # metrics and report writers
+├── scripts/
+│   └── train_best_model.py
+├── tests/
+│   └── test_classification_pipeline.py
+├── notebooks/
+│   └── project.ipynb
+├── data/
+│   └── sample/        # synthetic demo data only
+├── models/            # saved model artifacts
+└── reports/           # metrics, confusion matrices, splits, predictions
+```
 
 ## Leakage Controls
 
-The active pipeline explicitly:
+The pipeline splits by `subject_id` and asserts that no patient appears in more than one split. Features are restricted to admission-time values and ICU hour 0-24 aggregates. Outcome and future-information fields such as LOS, discharge/death timestamps, ICU `outtime`, and `last_careunit` are excluded from the feature matrix.
 
-- Splits by `subject_id`, so all ICU stays for a patient are assigned to exactly one of train, validation, or test.
-- Runs an assertion that no `subject_id` appears in more than one split.
-- Excludes outcome/future-information columns from features, including `los`, `outtime`, `dischtime`, `deathtime`, `dod`, `hospital_expire_flag`, `event_observed`, `duration`, and `last_careunit`.
-- Uses `first_careunit`, not `last_careunit`.
-- Uses admission-time values and first-24-hour aggregate features only.
-- Fits imputation, scaling, one-hot encoding, and model parameters only on the training split.
-- Handles imbalance with balanced sample weights computed on the training labels only.
+Preprocessing, encoding, scaling, model fitting, and class-imbalance weighting are fit only on the training split.
 
 ## Feature Sources
 
-The training script can reuse existing notebook-generated processed feature tables when `data/processed/modeling_dataset.parquet` exists. Those features are filtered to remove known leakage columns and prior outcome targets.
+The default path can reuse `data/processed/modeling_dataset.parquet` when it exists, after filtering known leakage columns. The raw rebuild path creates admission context, demographics, first-24-hour vitals/labs, input and output summaries, procedure indicators, prescription summaries, and timestamp-safe radiology-note indicators.
 
-The raw-data feature path uses:
+All time-stamped raw features are joined to ICU stays and filtered between ICU `intime` and `intime + 24 hours` before aggregation.
 
-- `icustays`: ICU identifiers, `intime`, `first_careunit`, and LOS target creation.
-- `admissions`: admission type/location, insurance, language, marital status, race, and hospital-to-ICU timing from `admittime`.
-- `patients`: gender and anchor age.
-- `chartevents`: optional first-24-hour numeric item summaries when present.
-- `labevents`: optional first-24-hour numeric lab summaries joined to ICU stays by admission.
-- `inputevents`: first-24-hour input event counts, unique item/category counts, total input volume, category counts, and common item volume totals.
-- `outputevents`: first-24-hour output event counts, unique output items, total output volume, urine output volume when identifiable from `d_items`, and common item volume totals.
-- `procedureevents`: first-24-hour procedure counts, unique procedure/category counts, common procedure category counts, and common procedure indicators.
-- `prescriptions`: first-24-hour medication order counts, unique drug/route/category counts, medication-category counts, route counts, and common drug indicators.
-- `radiology`: first-24-hour radiology note counts, note type counts, modality/body-region counts, and simple timestamp-safe text indicators.
-- `d_items`: lookup labels/categories for ICU event item IDs where helpful.
+## Model Performance
 
-All event summaries are filtered to ICU hour `0` through `24` before aggregation.
+Held-out test performance from `reports/classification/model_comparison.csv`:
+
+| Model | Macro F1 | Weighted F1 | Balanced Accuracy | ROC AUC Macro |
+| --- | ---: | ---: | ---: | ---: |
+| HistGradientBoosting | 0.590 | 0.640 | 0.617 | 0.814 |
+| Logistic Regression | 0.561 | 0.608 | 0.604 | 0.785 |
+| Dummy Majority | 0.225 | 0.342 | 0.333 | 0.500 |
 
 ## Setup
 
@@ -145,21 +141,6 @@ python scripts/train_best_model.py --sample
 
 ## Restricted MIMIC-IV Data
 
-The full project requires restricted MIMIC-IV ICU source tables. They are not included in this repository and must be obtained externally through the official PhysioNet credentialing and data-use process. After approval, place source files in `data/raw/` using names such as:
-
-```text
-admissions.csv
-chartevents.csv.gz
-d_items.csv
-d_labitems.csv
-icustays.csv
-inputevents.csv
-labevents.csv.gz
-outputevents.csv.gz
-patients.csv
-prescriptions.csv.gz
-procedureevents.csv.gz
-radiology.csv.gz
-```
+The full project requires restricted MIMIC-IV data from PhysioNet. These data are not included in this repository and must be obtained externally through PhysioNet credentialing and the required data-use agreement. After approval, place the source files locally under `data/raw/`.
 
 Only add new sources if the resulting features can be computed from ICU admission through hour 24 and do not reveal discharge timing, death timing, final LOS, or events after hour 24.
