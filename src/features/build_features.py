@@ -206,6 +206,14 @@ def _add_sum_pivot(
     return features.merge(pivot.reset_index(), on="stay_id", how="left")
 
 
+def _events_with_volume_ml(events: pd.DataFrame, value_col: str, unit_col: str) -> pd.DataFrame:
+    """Keep mL/L rows and normalize the value column to mL."""
+    volume_events = events[events[unit_col].fillna("").str.lower().isin(["ml", "l"])].copy()
+    is_liters = volume_events[unit_col].fillna("").str.lower().eq("l")
+    volume_events.loc[is_liters, value_col] = volume_events.loc[is_liters, value_col] * 1000
+    return volume_events
+
+
 def _aggregate_numeric_events(
     events: pd.DataFrame,
     stays: pd.DataFrame,
@@ -290,11 +298,7 @@ def build_inputevents_features(raw_dir: Path, base_df: pd.DataFrame) -> pd.DataF
     lookup = _load_d_items_lookup(raw_dir, linksto="inputevents")
     events = _attach_item_labels(events, lookup)
     events["amount"] = pd.to_numeric(events["amount"], errors="coerce")
-    amount_uom = events["amountuom"].fillna("").str.lower()
-    ml_events = events[amount_uom.isin(["ml", "l"])].copy()
-    ml_events.loc[ml_events["amountuom"].fillna("").str.lower().eq("l"), "amount"] = (
-        ml_events.loc[ml_events["amountuom"].fillna("").str.lower().eq("l"), "amount"] * 1000
-    )
+    ml_events = _events_with_volume_ml(events, value_col="amount", unit_col="amountuom")
 
     summary = events.groupby("stay_id").agg(
         input_event_count_24h=("itemid", "size"),
@@ -330,11 +334,7 @@ def build_outputevents_features(raw_dir: Path, base_df: pd.DataFrame) -> pd.Data
     lookup = _load_d_items_lookup(raw_dir, linksto="outputevents")
     events = _attach_item_labels(events, lookup)
     events["value"] = pd.to_numeric(events["value"], errors="coerce")
-    value_uom = events["valueuom"].fillna("").str.lower()
-    ml_events = events[value_uom.isin(["ml", "l"])].copy()
-    ml_events.loc[ml_events["valueuom"].fillna("").str.lower().eq("l"), "value"] = (
-        ml_events.loc[ml_events["valueuom"].fillna("").str.lower().eq("l"), "value"] * 1000
-    )
+    ml_events = _events_with_volume_ml(events, value_col="value", unit_col="valueuom")
     urine_events = events[
         events["item_label"].str.contains("urine|foley|void", case=False, na=False)
         | events["item_category"].str.contains("urine", case=False, na=False)

@@ -15,7 +15,6 @@ from src.data.validation import (
     filter_first_24h_events,
 )
 from src.features.build_features import (
-    TARGET_COLUMN,
     build_inputevents_features,
     build_modeling_frame,
     build_outputevents_features,

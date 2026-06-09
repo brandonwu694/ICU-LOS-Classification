@@ -13,6 +13,16 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.utils.class_weight import compute_sample_weight
 
 
+HGB_PARAM_DISTRIBUTIONS = {
+    "model__learning_rate": [0.02, 0.03, 0.05, 0.08, 0.1],
+    "model__max_iter": [150, 250, 350, 500],
+    "model__max_leaf_nodes": [15, 31, 45, 63],
+    "model__min_samples_leaf": [10, 20, 50, 100],
+    "model__l2_regularization": [0.0, 0.01, 0.05, 0.1, 0.5],
+    "model__max_bins": [64, 128, 255],
+}
+
+
 def build_preprocessor(numeric_cols: list[str], categorical_cols: list[str]) -> ColumnTransformer:
     """Build preprocessing fit only on training data inside each model pipeline."""
     numeric_transformer = Pipeline(
@@ -38,9 +48,17 @@ def build_preprocessor(numeric_cols: list[str], categorical_cols: list[str]) -> 
     return preprocessor
 
 
+def _make_model_pipeline(numeric_cols: list[str], categorical_cols: list[str], model) -> Pipeline:
+    return Pipeline(
+        steps=[
+            ("preprocessor", build_preprocessor(numeric_cols, categorical_cols)),
+            ("model", model),
+        ]
+    )
+
+
 def build_classifier(numeric_cols: list[str], categorical_cols: list[str]) -> Pipeline:
     """Build the selected preprocessing + gradient boosting classifier pipeline."""
-    preprocessor = build_preprocessor(numeric_cols, categorical_cols)
     classifier = HistGradientBoostingClassifier(
         learning_rate=0.05,
         max_iter=250,
@@ -50,34 +68,22 @@ def build_classifier(numeric_cols: list[str], categorical_cols: list[str]) -> Pi
         validation_fraction=0.1,
         random_state=42,
     )
-    return Pipeline(
-        steps=[
-            ("preprocessor", preprocessor),
-            ("model", classifier),
-        ]
-    )
+    return _make_model_pipeline(numeric_cols, categorical_cols, classifier)
 
 
 def build_logistic_regression_baseline(numeric_cols: list[str], categorical_cols: list[str]) -> Pipeline:
     """Build a regularized multinomial logistic regression baseline."""
-    preprocessor = build_preprocessor(numeric_cols, categorical_cols)
     classifier = LogisticRegression(
         class_weight="balanced",
         max_iter=1000,
         n_jobs=None,
         random_state=42,
     )
-    return Pipeline(
-        steps=[
-            ("preprocessor", preprocessor),
-            ("model", classifier),
-        ]
-    )
+    return _make_model_pipeline(numeric_cols, categorical_cols, classifier)
 
 
 def build_random_forest_baseline(numeric_cols: list[str], categorical_cols: list[str]) -> Pipeline:
     """Build a class-weighted random forest comparison model."""
-    preprocessor = build_preprocessor(numeric_cols, categorical_cols)
     classifier = RandomForestClassifier(
         n_estimators=300,
         max_depth=None,
@@ -86,12 +92,7 @@ def build_random_forest_baseline(numeric_cols: list[str], categorical_cols: list
         n_jobs=-1,
         random_state=42,
     )
-    return Pipeline(
-        steps=[
-            ("preprocessor", preprocessor),
-            ("model", classifier),
-        ]
-    )
+    return _make_model_pipeline(numeric_cols, categorical_cols, classifier)
 
 
 def build_dummy_baseline() -> DummyClassifier:
@@ -125,14 +126,6 @@ def tune_hist_gradient_boosting_classifier(
         raise ValueError("At least two patient groups are required for tuning")
 
     pipeline = build_classifier(numeric_cols, categorical_cols)
-    param_distributions = {
-        "model__learning_rate": [0.02, 0.03, 0.05, 0.08, 0.1],
-        "model__max_iter": [150, 250, 350, 500],
-        "model__max_leaf_nodes": [15, 31, 45, 63],
-        "model__min_samples_leaf": [10, 20, 50, 100],
-        "model__l2_regularization": [0.0, 0.01, 0.05, 0.1, 0.5],
-        "model__max_bins": [64, 128, 255],
-    }
     cv = StratifiedGroupKFold(
         n_splits=effective_splits,
         shuffle=True,
@@ -140,7 +133,7 @@ def tune_hist_gradient_boosting_classifier(
     )
     search = RandomizedSearchCV(
         estimator=pipeline,
-        param_distributions=param_distributions,
+        param_distributions=HGB_PARAM_DISTRIBUTIONS,
         n_iter=n_iter,
         scoring=scoring,
         cv=cv,
