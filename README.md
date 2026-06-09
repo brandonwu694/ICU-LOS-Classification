@@ -11,6 +11,8 @@ The original analysis uses restricted ICU data, so the public repository include
 | `README.md` | Project overview, file descriptions, setup instructions, and run instructions. |
 | `requirements.txt` | Python packages needed to run the demo notebook and analysis notebooks. |
 | `config.py` | Shared path configuration for local raw data, processed data, and model output directories. |
+| `scripts/train_best_model.py` | Trains the best-performing gradient boosting log-LOS model and saves it to `models/`. |
+| `models/.gitkeep` | Keeps the exposed `models/` directory in the repository before a trained model is generated. |
 | `project.html` | Static HTML version of the project demo with rendered outputs. |
 | `data/sample/README.md` | Description of the synthetic sample data files. |
 | `data/sample/demo_predictions.csv` | Synthetic patient-level examples with observed ICU LOS, predicted ICU LOS, and prediction error. |
@@ -57,6 +59,23 @@ Run all cells from top to bottom. The same rendered results are also saved in:
 ```text
 project.html
 ```
+
+## Train and Save the Best Model
+
+After running notebooks `01` through `10` to create the processed modeling artifacts, train the best-performing model with:
+
+```bash
+python scripts/train_best_model.py
+```
+
+This saves the fitted scikit-learn pipeline and metadata to:
+
+```text
+models/hist_gradient_boosting_log_los.joblib
+models/hist_gradient_boosting_log_los_metadata.json
+```
+
+The saved pipeline includes preprocessing, imputation, one-hot encoding, and the histogram gradient boosting regressor. It predicts `log1p(ICU LOS)` internally; convert predictions back to days with `numpy.expm1`.
 
 ## Full Pipeline With Restricted Data
 

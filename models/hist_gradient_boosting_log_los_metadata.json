@@ -1,0 +1,26 @@
+{
+  "model_name": "hist_gradient_boosting_log_los",
+  "created_at_utc": "2026-06-09T18:49:14.430853+00:00",
+  "target": "log1p(duration)",
+  "prediction_units": "ICU length of stay in days after expm1 transform",
+  "model_path": "/Users/brandonwu/Documents/ICU_LOS_Survival_Analysis/models/hist_gradient_boosting_log_los.joblib",
+  "train_rows": 75380,
+  "test_rows": 19064,
+  "predictor_count": 395,
+  "numeric_predictor_count": 383,
+  "categorical_predictor_count": 12,
+  "dropped_count_predictor_count": 48,
+  "metrics": {
+    "model": "hist_gradient_boosting_log_los",
+    "train_c_index": 0.7796607908672012,
+    "test_c_index": 0.7614857569305636,
+    "train_mae_days": 1.840963284058166,
+    "test_mae_days": 2.0382662926994053,
+    "train_median_ae_days": 0.7833630629549226,
+    "test_median_ae_days": 0.8418105402852268,
+    "train_rmse_days": 4.40451411226275,
+    "test_rmse_days": 4.901498611043006,
+    "train_median_pred_days": 2.2224728122973074,
+    "test_median_pred_days": 2.2487114242723654
+  }
+}
