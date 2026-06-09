@@ -46,7 +46,14 @@ The raw-data feature path uses:
 - `icustays`: ICU identifiers, `intime`, `first_careunit`, and LOS target creation.
 - `admissions`: admission type/location, insurance, language, marital status, race, and hospital-to-ICU timing from `admittime`.
 - `patients`: gender and anchor age.
-- Optional first-24-hour numeric summaries from `chartevents` and `labevents` when present.
+- `chartevents`: optional first-24-hour numeric item summaries when present.
+- `labevents`: optional first-24-hour numeric lab summaries joined to ICU stays by admission.
+- `inputevents`: first-24-hour input event counts, unique item/category counts, total input volume, category counts, and common item volume totals.
+- `outputevents`: first-24-hour output event counts, unique output items, total output volume, urine output volume when identifiable from `d_items`, and common item volume totals.
+- `procedureevents`: first-24-hour procedure counts, unique procedure/category counts, common procedure category counts, and common procedure indicators.
+- `prescriptions`: first-24-hour medication order counts, unique drug/route/category counts, medication-category counts, route counts, and common drug indicators.
+- `radiology`: first-24-hour radiology note counts, note type counts, modality/body-region counts, and simple timestamp-safe text indicators.
+- `d_items`: lookup labels/categories for ICU event item IDs where helpful.
 
 All event summaries are filtered to ICU hour `0` through `24` before aggregation.
 

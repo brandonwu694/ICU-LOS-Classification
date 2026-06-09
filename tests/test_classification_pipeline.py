@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import tempfile
 import unittest
+from pathlib import Path
 
 import pandas as pd
 
@@ -12,7 +14,17 @@ from src.data.validation import (
     assert_no_leakage_columns,
     filter_first_24h_events,
 )
-from src.features.build_features import infer_feature_types, make_sample_dataset
+from src.features.build_features import (
+    TARGET_COLUMN,
+    build_inputevents_features,
+    build_modeling_frame,
+    build_outputevents_features,
+    build_prescriptions_features,
+    build_procedureevents_features,
+    build_radiology_features,
+    infer_feature_types,
+    make_sample_dataset,
+)
 from src.models.pipeline import build_classifier, fit_with_balanced_weights
 
 
@@ -84,6 +96,203 @@ class ClassificationPipelineTests(unittest.TestCase):
         self.assertEqual(train_transformed.shape[1], test_transformed.shape[1])
         assert_matching_feature_columns(feature_cols, list(test[feature_cols].columns))
 
+    def test_unused_raw_sources_build_first24h_stay_level_features(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            raw_dir = Path(tmp)
+            base = _write_minimal_raw_fixture(raw_dir)
+
+            builders = [
+                build_inputevents_features,
+                build_outputevents_features,
+                build_procedureevents_features,
+                build_prescriptions_features,
+                build_radiology_features,
+            ]
+            for builder in builders:
+                features = builder(raw_dir, base)
+                self.assertEqual(len(features), base["stay_id"].nunique())
+                self.assertFalse(features["stay_id"].duplicated().any())
+                assert_no_leakage_columns([col for col in features.columns if col != "stay_id"])
+
+            input_features = build_inputevents_features(raw_dir, base).set_index("stay_id")
+            self.assertEqual(input_features.loc[10, "input_event_count_24h"], 1)
+            self.assertEqual(input_features.loc[10, "input_total_volume_ml_24h"], 100)
+
+            output_features = build_outputevents_features(raw_dir, base).set_index("stay_id")
+            self.assertEqual(output_features.loc[10, "output_event_count_24h"], 1)
+            self.assertEqual(output_features.loc[10, "output_total_volume_ml_24h"], 250)
+            self.assertEqual(output_features.loc[10, "output_urine_volume_ml_24h"], 250)
+
+            procedure_features = build_procedureevents_features(raw_dir, base).set_index("stay_id")
+            self.assertEqual(procedure_features.loc[10, "procedure_event_count_24h"], 1)
+
+            prescription_features = build_prescriptions_features(raw_dir, base).set_index("stay_id")
+            self.assertEqual(prescription_features.loc[10, "prescription_order_count_24h"], 1)
+            self.assertEqual(prescription_features.loc[10, "prescription_category_antibiotic_count_24h"], 1)
+
+            radiology_features = build_radiology_features(raw_dir, base).set_index("stay_id")
+            self.assertEqual(radiology_features.loc[10, "radiology_note_count_24h"], 1)
+            self.assertEqual(radiology_features.loc[10, "radiology_mentions_line_or_tube_24h"], 1)
+
+    def test_raw_rebuild_with_added_sources_remains_model_ready(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            raw_dir = Path(tmp)
+            _write_minimal_raw_fixture(raw_dir)
+            df, feature_cols = build_modeling_frame(raw_dir, processed_dir=None)
+            assert_no_leakage_columns(feature_cols)
+
+            source_prefixes = ["input_", "output_", "procedure_", "prescription_", "radiology_"]
+            for prefix in source_prefixes:
+                self.assertTrue(any(col.startswith(prefix) for col in feature_cols), prefix)
+
+            df["split"] = patient_level_split(df, test_size=0.25, val_size=0.25, random_state=11)
+            assert_patient_split_integrity(df)
+            train = df[df["split"].eq("train")]
+            test = df[df["split"].eq("test")]
+            assert_matching_feature_columns(train[feature_cols].columns, test[feature_cols].columns)
+
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def _write_minimal_raw_fixture(raw_dir: Path) -> pd.DataFrame:
+    icu = pd.DataFrame(
+        {
+            "subject_id": [1, 2, 3, 4],
+            "hadm_id": [100, 200, 300, 400],
+            "stay_id": [10, 20, 30, 40],
+            "first_careunit": ["MICU", "SICU", "CCU", "MICU"],
+            "last_careunit": ["MICU", "SICU", "CCU", "MICU"],
+            "intime": pd.to_datetime(
+                [
+                    "2200-01-01 00:00:00",
+                    "2200-01-02 00:00:00",
+                    "2200-01-03 00:00:00",
+                    "2200-01-04 00:00:00",
+                ]
+            ),
+            "outtime": pd.to_datetime(
+                [
+                    "2200-01-02 12:00:00",
+                    "2200-01-05 00:00:00",
+                    "2200-01-11 00:00:00",
+                    "2200-01-05 12:00:00",
+                ]
+            ),
+            "los": [1.5, 3.0, 8.0, 1.7],
+        }
+    )
+    admissions = pd.DataFrame(
+        {
+            "subject_id": [1, 2, 3, 4],
+            "hadm_id": [100, 200, 300, 400],
+            "admittime": pd.to_datetime(
+                [
+                    "2199-12-31 20:00:00",
+                    "2200-01-01 20:00:00",
+                    "2200-01-02 20:00:00",
+                    "2200-01-03 20:00:00",
+                ]
+            ),
+            "admission_type": ["EW EMER.", "URGENT", "DIRECT EMER.", "OBSERVATION ADMIT"],
+            "admission_location": ["ER", "TRANSFER", "CLINIC", "ER"],
+            "insurance": ["Medicare", "Medicaid", "Other", "Medicare"],
+            "language": ["English", "English", "Spanish", "English"],
+            "marital_status": ["SINGLE", "MARRIED", "WIDOWED", "SINGLE"],
+            "race": ["WHITE", "BLACK", "HISPANIC", "ASIAN"],
+        }
+    )
+    patients = pd.DataFrame(
+        {
+            "subject_id": [1, 2, 3, 4],
+            "gender": ["F", "M", "F", "M"],
+            "anchor_age": [50, 60, 70, 45],
+        }
+    )
+    d_items = pd.DataFrame(
+        {
+            "itemid": [111, 222, 333],
+            "label": ["Normal Saline", "Foley Urine", "Central Line"],
+            "abbreviation": ["NS", "Urine", "Line"],
+            "linksto": ["inputevents", "outputevents", "procedureevents"],
+            "category": ["Fluids", "Urine", "Procedures"],
+            "unitname": ["mL", "mL", ""],
+            "param_type": ["Numeric", "Numeric", "Process"],
+            "lownormalvalue": [None, None, None],
+            "highnormalvalue": [None, None, None],
+        }
+    )
+    inputevents = pd.DataFrame(
+        {
+            "subject_id": [1, 1],
+            "hadm_id": [100, 100],
+            "stay_id": [10, 10],
+            "starttime": pd.to_datetime(["2200-01-01 01:00:00", "2200-01-02 01:01:00"]),
+            "itemid": [111, 111],
+            "amount": [100, 999],
+            "amountuom": ["mL", "mL"],
+            "ordercategoryname": ["04-Fluids", "04-Fluids"],
+        }
+    )
+    outputevents = pd.DataFrame(
+        {
+            "subject_id": [1, 1],
+            "hadm_id": [100, 100],
+            "stay_id": [10, 10],
+            "charttime": pd.to_datetime(["2200-01-01 02:00:00", "2200-01-02 02:00:00"]),
+            "itemid": [222, 222],
+            "value": [250, 999],
+            "valueuom": ["mL", "mL"],
+        }
+    )
+    procedureevents = pd.DataFrame(
+        {
+            "subject_id": [1, 1],
+            "hadm_id": [100, 100],
+            "stay_id": [10, 10],
+            "starttime": pd.to_datetime(["2200-01-01 03:00:00", "2200-01-02 03:00:00"]),
+            "itemid": [333, 333],
+            "ordercategoryname": ["Procedures", "Procedures"],
+        }
+    )
+    prescriptions = pd.DataFrame(
+        {
+            "subject_id": [1, 1],
+            "hadm_id": [100, 100],
+            "starttime": pd.to_datetime(["2200-01-01 04:00:00", "2200-01-02 04:00:00"]),
+            "drug_type": ["MAIN", "MAIN"],
+            "drug": ["Vancomycin", "Furosemide"],
+            "route": ["IV", "IV"],
+            "dose_val_rx": ["1", "1"],
+        }
+    )
+    radiology = pd.DataFrame(
+        {
+            "note_id": ["n1", "n2"],
+            "subject_id": [1, 1],
+            "hadm_id": [100, 100],
+            "note_type": ["RR", "RR"],
+            "charttime": pd.to_datetime(["2200-01-01 05:00:00", "2200-01-02 05:00:00"]),
+            "text": [
+                "CHEST radiograph. IMPRESSION: line and tube. Pneumonia opacity.",
+                "CT abdomen after first day.",
+            ],
+        }
+    )
+
+    tables = {
+        "icustays": icu,
+        "admissions": admissions,
+        "patients": patients,
+        "d_items": d_items,
+        "inputevents": inputevents,
+        "outputevents": outputevents,
+        "procedureevents": procedureevents,
+        "prescriptions": prescriptions,
+        "radiology": radiology,
+    }
+    for name, table in tables.items():
+        table.to_csv(raw_dir / f"{name}.csv", index=False)
+
+    return icu[["subject_id", "hadm_id", "stay_id", "intime"]]
