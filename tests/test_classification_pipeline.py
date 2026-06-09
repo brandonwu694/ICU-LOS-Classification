@@ -30,6 +30,7 @@ from src.models.pipeline import (
     build_dummy_baseline,
     build_logistic_regression_baseline,
     build_random_forest_baseline,
+    tune_hist_gradient_boosting_classifier,
 )
 
 
@@ -123,6 +124,35 @@ class ClassificationPipelineTests(unittest.TestCase):
         random_forest = build_random_forest_baseline(numeric_cols, categorical_cols)
         random_forest.fit(train[feature_cols], train[TARGET_COLUMN])
         self.assertEqual(len(random_forest.predict(test[feature_cols])), len(test))
+
+    def test_group_aware_hgb_tuning_returns_fitted_pipeline(self) -> None:
+        df = make_sample_dataset()
+        feature_cols = [
+            col
+            for col in df.columns
+            if col not in {"subject_id", "hadm_id", "stay_id", "intime", TARGET_COLUMN}
+        ]
+        train = df.iloc[:45].copy()
+        numeric_cols, categorical_cols = infer_feature_types(train, feature_cols)
+
+        tuned_model, tuning_results, best_params = tune_hist_gradient_boosting_classifier(
+            numeric_cols,
+            categorical_cols,
+            train[feature_cols],
+            train[TARGET_COLUMN],
+            groups=train["subject_id"],
+            n_iter=2,
+            cv_splits=2,
+            scoring="f1_macro",
+            random_state=7,
+        )
+
+        self.assertEqual(
+            type(tuned_model.named_steps["model"]).__name__,
+            "HistGradientBoostingClassifier",
+        )
+        self.assertEqual(len(tuning_results), 2)
+        self.assertTrue(best_params)
 
     def test_unused_raw_sources_build_first24h_stay_level_features(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -82,6 +82,12 @@ Build features directly from `data/raw/` instead:
 python scripts/train_best_model.py --from-raw
 ```
 
+Optionally tune the HistGradientBoosting model on the training split with patient-group-aware cross-validation:
+
+```bash
+python scripts/train_best_model.py --tune-hgb --tuning-iterations 20
+```
+
 Create a tiny synthetic demo model artifact:
 
 ```bash
@@ -121,6 +127,12 @@ Metrics include macro F1, weighted F1, balanced accuracy, per-class precision/re
 
 ```text
 reports/classification/model_comparison.csv
+```
+
+When `--tune-hgb` is used, tuning results are written to:
+
+```text
+reports/classification/hgb_tuning_results.csv
 ```
 
 ## Run The Demo Notebook

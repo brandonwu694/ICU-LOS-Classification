@@ -29,6 +29,7 @@ from src.models.pipeline import (
     build_dummy_baseline,
     build_logistic_regression_baseline,
     build_random_forest_baseline,
+    tune_hist_gradient_boosting_classifier,
 )
 
 
@@ -55,6 +56,29 @@ def parse_args() -> argparse.Namespace:
         help="Train on a tiny synthetic dataset for demo artifact creation.",
     )
     parser.add_argument("--random-state", type=int, default=42)
+    parser.add_argument(
+        "--tune-hgb",
+        action="store_true",
+        help="Tune HistGradientBoosting hyperparameters with group-aware CV on the training split.",
+    )
+    parser.add_argument(
+        "--tuning-iterations",
+        type=int,
+        default=20,
+        help="Number of randomized hyperparameter settings to evaluate when --tune-hgb is used.",
+    )
+    parser.add_argument(
+        "--tuning-cv-splits",
+        type=int,
+        default=3,
+        help="Number of StratifiedGroupKFold splits for --tune-hgb.",
+    )
+    parser.add_argument(
+        "--tuning-scoring",
+        choices=["f1_macro", "balanced_accuracy"],
+        default="f1_macro",
+        help="Scoring metric for HistGradientBoosting hyperparameter tuning.",
+    )
     return parser.parse_args()
 
 
@@ -71,21 +95,43 @@ def _load_inputs(args: argparse.Namespace) -> tuple[pd.DataFrame, list[str]]:
     return build_modeling_frame(args.raw_data_dir, processed_dir=processed_dir)
 
 
-def _fit_models(numeric_cols: list[str], categorical_cols: list[str], X_train, y_train) -> dict[str, object]:
+def _fit_models(
+    numeric_cols: list[str],
+    categorical_cols: list[str],
+    X_train,
+    y_train,
+    groups_train,
+    args: argparse.Namespace,
+) -> tuple[dict[str, object], pd.DataFrame | None, dict | None]:
     models = {
         "dummy_most_frequent": build_dummy_baseline(),
         "logistic_regression": build_logistic_regression_baseline(numeric_cols, categorical_cols),
         "random_forest": build_random_forest_baseline(numeric_cols, categorical_cols),
-        MODEL_NAME: build_classifier(numeric_cols, categorical_cols),
     }
     fitted = {}
     for model_name, model in models.items():
-        if model_name == MODEL_NAME:
-            fitted[model_name] = fit_with_balanced_weights(model, X_train, y_train)
-        else:
-            model.fit(X_train, y_train)
-            fitted[model_name] = model
-    return fitted
+        model.fit(X_train, y_train)
+        fitted[model_name] = model
+
+    tuning_results = None
+    best_params = None
+    if args.tune_hgb:
+        tuned_model, tuning_results, best_params = tune_hist_gradient_boosting_classifier(
+            numeric_cols,
+            categorical_cols,
+            X_train,
+            y_train,
+            groups=groups_train,
+            n_iter=args.tuning_iterations,
+            cv_splits=args.tuning_cv_splits,
+            scoring=args.tuning_scoring,
+            random_state=args.random_state,
+        )
+        fitted[MODEL_NAME] = tuned_model
+    else:
+        model = build_classifier(numeric_cols, categorical_cols)
+        fitted[MODEL_NAME] = fit_with_balanced_weights(model, X_train, y_train)
+    return fitted, tuning_results, best_params
 
 
 def _metrics_row(model_name: str, split_name: str, metrics: dict) -> dict:
@@ -123,6 +169,7 @@ def main() -> None:
 
     X_train = train_df[feature_cols]
     y_train = train_df[TARGET_COLUMN].astype("int64")
+    groups_train = train_df["subject_id"]
     X_val = val_df[feature_cols]
     y_val = val_df[TARGET_COLUMN].astype("int64")
     X_test = test_df[feature_cols]
@@ -130,10 +177,20 @@ def main() -> None:
     assert_matching_feature_columns(X_train.columns, X_val.columns)
     assert_matching_feature_columns(X_train.columns, X_test.columns)
 
-    fitted_models = _fit_models(numeric_cols, categorical_cols, X_train, y_train)
+    fitted_models, tuning_results, best_params = _fit_models(
+        numeric_cols,
+        categorical_cols,
+        X_train,
+        y_train,
+        groups_train,
+        args,
+    )
     model = fitted_models[MODEL_NAME]
 
     reports_dir = args.reports_dir / ("classification_sample" if args.sample else "classification")
+    if tuning_results is not None:
+        reports_dir.mkdir(parents=True, exist_ok=True)
+        tuning_results.to_csv(reports_dir / "hgb_tuning_results.csv", index=False)
     comparison_rows = []
     selected_test_metrics = None
     for model_name, fitted_model in fitted_models.items():
@@ -205,6 +262,15 @@ def main() -> None:
         "split_policy": "patient-level split by subject_id with explicit overlap assertion",
         "class_imbalance": "balanced sample weights fitted on training split only",
         "baseline_models": BASELINE_MODEL_NAMES,
+        "hyperparameter_tuning": {
+            "enabled": bool(args.tune_hgb),
+            "method": "RandomizedSearchCV with StratifiedGroupKFold by subject_id",
+            "iterations": int(args.tuning_iterations) if args.tune_hgb else 0,
+            "cv_splits": int(args.tuning_cv_splits) if args.tune_hgb else 0,
+            "scoring": args.tuning_scoring if args.tune_hgb else None,
+            "best_params": best_params,
+            "results_path": str(reports_dir / "hgb_tuning_results.csv") if args.tune_hgb else None,
+        },
         "model_path": str(model_path),
         "train_rows": int(len(train_df)),
         "validation_rows": int(len(val_df)),
@@ -221,6 +287,9 @@ def main() -> None:
     print(f"Saved metadata: {metadata_path}")
     print(f"Saved reports: {reports_dir}")
     print(f"Saved model comparison: {reports_dir / 'model_comparison.csv'}")
+    if args.tune_hgb:
+        print(f"Saved HGB tuning results: {reports_dir / 'hgb_tuning_results.csv'}")
+        print(f"Best HGB params: {best_params}")
     print(json.dumps({k: v for k, v in test_metrics.items() if k != "classification_report"}, indent=2))
 
 
