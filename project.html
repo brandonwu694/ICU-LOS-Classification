@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>ICU Length of Stay Prediction Demo</title><style>
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.5; margin: 40px auto; max-width: 980px; color: #222; }
+h1, h2 { color: #18324a; } h3 { margin-top: 20px; }
+table { border-collapse: collapse; width: 100%; margin: 16px 0 28px; font-size: 14px; }
+th, td { border: 1px solid #ddd; padding: 7px 9px; text-align: left; }
+th { background: #f2f5f7; }
+.note { background: #f7f7f7; border-left: 4px solid #4c78a8; padding: 12px 16px; }
+.bars { max-width: 820px; margin: 12px 0 28px; }
+.bar-row { display: grid; grid-template-columns: 260px 1fr 70px; gap: 10px; align-items: center; margin: 7px 0; font-size: 14px; }
+.bar-bg { background: #edf1f4; height: 18px; }
+.bar { height: 18px; }
+svg { margin-bottom: 28px; border: 1px solid #ddd; }
+</style></head>
+<body>
+<h1>ICU Length of Stay Prediction Demo</h1>
+<p class="note">This HTML report is the static companion to <code>notebooks/project_demo.ipynb</code>. It uses only synthetic sample data so the public repository can be run without restricted ICU records.</p>
+<h2>Model Comparison</h2><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>model</th>
+      <th>test_c_index</th>
+      <th>test_mae_days</th>
+      <th>test_median_ae_days</th>
+      <th>test_rmse_days</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>lognormal_aft</td>
+      <td>0.738</td>
+      <td>2.16</td>
+      <td>0.82</td>
+      <td>5.12</td>
+    </tr>
+    <tr>
+      <td>hist_gradient_boosting_log_los</td>
+      <td>0.761</td>
+      <td>2.04</td>
+      <td>0.84</td>
+      <td>4.90</td>
+    </tr>
+  </tbody>
+</table><h3>Test MAE by model</h3><div class="bars"><div class="bar-row"><div>lognormal_aft</div><div class="bar-bg"><div class="bar" style="width:100.0%; background:#f58518"></div></div><div>2.16</div></div><div class="bar-row"><div>hist_gradient_boosting_log_los</div><div class="bar-bg"><div class="bar" style="width:94.4%; background:#f58518"></div></div><div>2.04</div></div></div>
+<h2>Example Predictions</h2><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>patient_id</th>
+      <th>age_group</th>
+      <th>careunit_group</th>
+      <th>observed_los_days</th>
+      <th>predicted_los_days</th>
+      <th>absolute_error_days</th>
+      <th>example_type</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>DEMO-014</td>
+      <td>18-39</td>
+      <td>Neuro ICU</td>
+      <td>2.76</td>
+      <td>2.69</td>
+      <td>0.07</td>
+      <td>low_error</td>
+    </tr>
+    <tr>
+      <td>DEMO-054</td>
+      <td>18-39</td>
+      <td>Neuro ICU</td>
+      <td>3.42</td>
+      <td>3.50</td>
+      <td>0.08</td>
+      <td>low_error</td>
+    </tr>
+    <tr>
+      <td>DEMO-049</td>
+      <td>40-59</td>
+      <td>Neuro ICU</td>
+      <td>2.99</td>
+      <td>2.89</td>
+      <td>0.10</td>
+      <td>low_error</td>
+    </tr>
+    <tr>
+      <td>DEMO-018</td>
+      <td>40-59</td>
+      <td>Surgical ICU</td>
+      <td>3.37</td>
+      <td>3.48</td>
+      <td>0.11</td>
+      <td>low_error</td>
+    </tr>
+    <tr>
+      <td>DEMO-059</td>
+      <td>80+</td>
+      <td>Neuro ICU</td>
+      <td>2.73</td>
+      <td>2.85</td>
+      <td>0.12</td>
+      <td>low_error</td>
+    </tr>
+    <tr>
+      <td>DEMO-013</td>
+      <td>60-79</td>
+      <td>Surgical ICU</td>
+      <td>15.03</td>
+      <td>6.05</td>
+      <td>8.98</td>
+      <td>high_error</td>
+    </tr>
+    <tr>
+      <td>DEMO-044</td>
+      <td>60-79</td>
+      <td>Neuro ICU</td>
+      <td>14.46</td>
+      <td>6.89</td>
+      <td>7.57</td>
+      <td>high_error</td>
+    </tr>
+    <tr>
+      <td>DEMO-028</td>
+      <td>80+</td>
+      <td>Surgical ICU</td>
+      <td>11.14</td>
+      <td>5.79</td>
+      <td>5.35</td>
+      <td>high_error</td>
+    </tr>
+    <tr>
+      <td>DEMO-055</td>
+      <td>60-79</td>
+      <td>Trauma/Surgical ICU</td>
+      <td>12.94</td>
+      <td>8.64</td>
+      <td>4.30</td>
+      <td>high_error</td>
+    </tr>
+    <tr>
+      <td>DEMO-050</td>
+      <td>80+</td>
+      <td>Trauma/Surgical ICU</td>
+      <td>7.14</td>
+      <td>3.37</td>
+      <td>3.77</td>
+      <td>high_error</td>
+    </tr>
+  </tbody>
+</table><h3>Predicted vs. observed ICU LOS</h3><svg width="420" height="410" viewBox="0 0 420 410" role="img"><rect x="0" y="0" width="420" height="410" fill="white"/><line x1="40" y1="360" x2="360" y2="40" stroke="#555" stroke-dasharray="5,5"/><line x1="40" y1="360" x2="370" y2="360" stroke="#222"/><line x1="40" y1="360" x2="40" y2="30" stroke="#222"/><circle cx='78.5' cy='311.0' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='104.5' cy='313.6' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='90.5' cy='257.2' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='103.0' cy='307.4' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='121.3' cy='290.2' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='105.1' cy='291.4' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='117.9' cy='295.7' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='109.2' cy='293.6' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='118.1' cy='289.1' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='133.5' cy='276.8' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='122.8' cy='284.8' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='82.6' cy='303.4' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='360.0' cy='231.2' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='98.8' cy='302.7' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='109.6' cy='294.6' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='87.3' cy='303.8' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='143.3' cy='292.1' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='111.7' cy='285.9' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='112.2' cy='278.5' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='174.8' cy='280.4' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='110.0' cy='265.0' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='143.3' cy='284.2' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='79.6' cy='314.4' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='100.0' cy='303.8' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='109.2' cy='301.7' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='108.6' cy='298.9' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='108.6' cy='288.7' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='277.2' cy='236.7' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='100.0' cy='283.1' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='116.4' cy='277.0' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='130.9' cy='287.0' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='134.7' cy='286.3' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='171.2' cy='282.9' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='82.6' cy='299.1' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='85.6' cy='289.5' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='77.5' cy='306.8' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='84.9' cy='298.3' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='130.9' cy='304.9' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='166.9' cy='291.0' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='111.5' cy='281.0' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='110.5' cy='295.9' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='110.0' cy='294.9' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='110.5' cy='280.2' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='347.9' cy='213.3' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='99.4' cy='297.8' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='91.9' cy='311.5' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='87.5' cy='302.5' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='99.8' cy='306.6' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='103.7' cy='298.5' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='192.0' cy='288.3' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='103.9' cy='290.4' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='102.8' cy='285.7' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='107.1' cy='259.7' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='112.8' cy='285.5' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='315.5' cy='176.0' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='86.2' cy='307.2' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='88.5' cy='320.6' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='92.8' cy='310.4' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='98.1' cy='299.3' r='4' fill='#4c78a8' opacity='0.75'/><circle cx='108.8' cy='298.5' r='4' fill='#4c78a8' opacity='0.75'/><text x="160" y="400" font-size="13">Observed LOS, days</text><text x="8" y="210" font-size="13" transform="rotate(-90 8 210)">Predicted LOS, days</text></svg>
+<h2>Error By Care Unit</h2><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>careunit_group</th>
+      <th>rows</th>
+      <th>median_observed_los</th>
+      <th>median_predicted_los</th>
+      <th>mae_days</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Surgical ICU</td>
+      <td>12</td>
+      <td>3.280</td>
+      <td>3.550</td>
+      <td>2.00</td>
+    </tr>
+    <tr>
+      <td>Trauma/Surgical ICU</td>
+      <td>12</td>
+      <td>3.475</td>
+      <td>3.340</td>
+      <td>1.22</td>
+    </tr>
+    <tr>
+      <td>Neuro ICU</td>
+      <td>12</td>
+      <td>2.975</td>
+      <td>3.065</td>
+      <td>1.15</td>
+    </tr>
+    <tr>
+      <td>Cardiac ICU</td>
+      <td>12</td>
+      <td>3.125</td>
+      <td>3.040</td>
+      <td>0.72</td>
+    </tr>
+    <tr>
+      <td>Medical ICU</td>
+      <td>12</td>
+      <td>3.030</td>
+      <td>2.940</td>
+      <td>0.46</td>
+    </tr>
+  </tbody>
+</table><h3>Synthetic demo error by care unit</h3><div class="bars"><div class="bar-row"><div>Medical ICU</div><div class="bar-bg"><div class="bar" style="width:23.0%; background:#54a24b"></div></div><div>0.46</div></div><div class="bar-row"><div>Cardiac ICU</div><div class="bar-bg"><div class="bar" style="width:36.0%; background:#54a24b"></div></div><div>0.72</div></div><div class="bar-row"><div>Neuro ICU</div><div class="bar-bg"><div class="bar" style="width:57.5%; background:#54a24b"></div></div><div>1.15</div></div><div class="bar-row"><div>Trauma/Surgical ICU</div><div class="bar-bg"><div class="bar" style="width:61.0%; background:#54a24b"></div></div><div>1.22</div></div><div class="bar-row"><div>Surgical ICU</div><div class="bar-bg"><div class="bar" style="width:100.0%; background:#54a24b"></div></div><div>2</div></div></div>
+<h2>Feature Groups</h2><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>feature</th>
+      <th>relative_importance</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>first_careunit / careunit group</td>
+      <td>0.21</td>
+    </tr>
+    <tr>
+      <td>first 24h vital sign extremes</td>
+      <td>0.18</td>
+    </tr>
+    <tr>
+      <td>first 24h lab extremes</td>
+      <td>0.17</td>
+    </tr>
+    <tr>
+      <td>age group</td>
+      <td>0.13</td>
+    </tr>
+    <tr>
+      <td>input events / medication exposure</td>
+      <td>0.12</td>
+    </tr>
+    <tr>
+      <td>admission source and urgency</td>
+      <td>0.10</td>
+    </tr>
+    <tr>
+      <td>missingness indicators</td>
+      <td>0.09</td>
+    </tr>
+  </tbody>
+</table><h3>Feature groups used by the final model</h3><div class="bars"><div class="bar-row"><div>missingness indicators</div><div class="bar-bg"><div class="bar" style="width:42.9%; background:#b279a2"></div></div><div>0.09</div></div><div class="bar-row"><div>admission source and urgency</div><div class="bar-bg"><div class="bar" style="width:47.6%; background:#b279a2"></div></div><div>0.1</div></div><div class="bar-row"><div>input events / medication exposure</div><div class="bar-bg"><div class="bar" style="width:57.1%; background:#b279a2"></div></div><div>0.12</div></div><div class="bar-row"><div>age group</div><div class="bar-bg"><div class="bar" style="width:61.9%; background:#b279a2"></div></div><div>0.13</div></div><div class="bar-row"><div>first 24h lab extremes</div><div class="bar-bg"><div class="bar" style="width:81.0%; background:#b279a2"></div></div><div>0.17</div></div><div class="bar-row"><div>first 24h vital sign extremes</div><div class="bar-bg"><div class="bar" style="width:85.7%; background:#b279a2"></div></div><div>0.18</div></div><div class="bar-row"><div>first_careunit / careunit group</div><div class="bar-bg"><div class="bar" style="width:100.0%; background:#b279a2"></div></div><div>0.21</div></div></div>
+<h2>Takeaways</h2><ul><li>ICU length of stay is right-skewed, so log-scale modeling and robust error summaries are important.</li><li>The gradient boosting log-LOS model had the best overall discrimination and mean absolute error in the final comparison.</li><li>Very long ICU stays remain difficult to predict from first-day data alone, so subgroup and tail diagnostics are essential.</li></ul>
+</body></html>

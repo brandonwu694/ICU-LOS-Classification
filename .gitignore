@@ -3,6 +3,8 @@
 # Ignore dataset files but keep directory structure
 data/*
 !data/.gitkeep
+!data/sample/
+!data/sample/**
 
 dst-env/
 .cache/v/cache/lastfailed

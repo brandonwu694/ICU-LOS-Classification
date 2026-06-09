@@ -1,0 +1,3 @@
+model,test_c_index,test_mae_days,test_median_ae_days,test_rmse_days
+lognormal_aft,0.738,2.16,0.82,5.12
+hist_gradient_boosting_log_los,0.761,2.04,0.84,4.9

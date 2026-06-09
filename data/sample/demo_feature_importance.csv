@@ -1,0 +1,8 @@
+feature,relative_importance
+first_careunit / careunit group,0.21
+first 24h vital sign extremes,0.18
+first 24h lab extremes,0.17
+age group,0.13
+input events / medication exposure,0.12
+admission source and urgency,0.1
+missingness indicators,0.09

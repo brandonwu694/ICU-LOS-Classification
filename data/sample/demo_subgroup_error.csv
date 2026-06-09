@@ -1,0 +1,6 @@
+careunit_group,rows,median_observed_los,median_predicted_los,mae_days
+Cardiac ICU,12,3.125,3.04,0.72
+Medical ICU,12,3.0300000000000002,2.94,0.46
+Neuro ICU,12,2.975,3.0650000000000004,1.15
+Surgical ICU,12,3.2800000000000002,3.55,2.0
+Trauma/Surgical ICU,12,3.4749999999999996,3.34,1.22
