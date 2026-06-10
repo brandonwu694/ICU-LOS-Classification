@@ -13,11 +13,59 @@
   "numeric_feature_count": 368,
   "categorical_feature_count": 12,
   "feature_window": "ICU admission through first 24 hours only",
+  "hyperparameter_tuning": {
+    "enabled": true,
+    "method": "RandomizedSearchCV with StratifiedGroupKFold by subject_id",
+    "iterations": 20,
+    "cv_splits": 3,
+    "scoring": "f1_macro",
+    "best_params": {
+      "model__min_samples_leaf": 50,
+      "model__max_leaf_nodes": 45,
+      "model__max_iter": 500,
+      "model__max_bins": 128,
+      "model__learning_rate": 0.02,
+      "model__l2_regularization": 0.01
+    }
+  },
   "test_metrics": {
-    "macro_f1": 0.5902319097728024,
-    "weighted_f1": 0.6402985568507089,
-    "balanced_accuracy": 0.6166020942176125,
-    "roc_auc_ovr_macro": 0.8139923137268302,
-    "roc_auc_ovr_weighted": 0.8070580784542051
+    "macro_f1": 0.5992641284321706,
+    "weighted_f1": 0.6476321409987265,
+    "balanced_accuracy": 0.6254336364980982,
+    "roc_auc_ovr_macro": 0.816093720662663,
+    "roc_auc_ovr_weighted": 0.8091157786855137
+  },
+  "per_class_test_metrics": {
+    "0": {
+      "precision": 0.7964154411764706,
+      "recall": 0.7177964931658153,
+      "f1-score": 0.7550649916491177,
+      "support": 7243.0
+    },
+    "1": {
+      "precision": 0.558476705973323,
+      "recall": 0.5440677966101695,
+      "f1-score": 0.5511780978727463,
+      "support": 5310.0
+    },
+    "2": {
+      "precision": 0.4096244131455399,
+      "recall": 0.6144366197183099,
+      "f1-score": 0.4915492957746479,
+      "support": 1704.0
+    },
+    "accuracy": 0.6407378831451217,
+    "macro avg": {
+      "precision": 0.5881721867651112,
+      "recall": 0.6254336364980982,
+      "f1-score": 0.5992641284321706,
+      "support": 14257.0
+    },
+    "weighted avg": {
+      "precision": 0.6615661323672246,
+      "recall": 0.6407378831451217,
+      "f1-score": 0.6476321409987265,
+      "support": 14257.0
+    }
   }
 }

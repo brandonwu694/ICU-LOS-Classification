@@ -62,10 +62,21 @@ Held-out test performance from `reports/classification/model_comparison.csv`:
 
 | Model | Macro F1 | Weighted F1 | Balanced Accuracy | ROC AUC Macro |
 | --- | ---: | ---: | ---: | ---: |
-| HistGradientBoosting | 0.590 | 0.640 | 0.617 | 0.814 |
+| HistGradientBoosting tuned | 0.599 | 0.648 | 0.625 | 0.816 |
 | Random Forest | 0.579 | 0.649 | 0.566 | 0.807 |
 | Logistic Regression | 0.561 | 0.608 | 0.604 | 0.785 |
 | Dummy Majority | 0.225 | 0.342 | 0.333 | 0.500 |
+
+The selected HistGradientBoosting model was tuned with patient-group-aware cross-validation. Best parameters from the tuned run:
+
+```text
+model__learning_rate: 0.02
+model__max_iter: 500
+model__max_leaf_nodes: 45
+model__min_samples_leaf: 50
+model__l2_regularization: 0.01
+model__max_bins: 128
+```
 
 ## Setup
 
@@ -74,6 +85,8 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 ```
+
+The saved joblib model was created with scikit-learn `1.8.0`, so `requirements.txt` pins that version for reproducible loading.
 
 ## Run Tests
 

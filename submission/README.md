@@ -19,6 +19,29 @@ This package demonstrates a saved ICU length-of-stay classifier using synthetic 
 | `src/models/pipeline.py` | Preprocessing and classifier pipeline definitions, including the selected HistGradientBoosting model. |
 | `requirements.txt` | Python packages needed to run the notebook. |
 
+
+## Saved Model Summary
+
+The included `icu_los_classifier.joblib` file is the tuned HistGradientBoosting model. It was trained on restricted MIMIC-IV-derived data and evaluated on a held-out patient-level test split.
+
+| Metric | Held-out test value |
+| --- | ---: |
+| Macro F1 | 0.599 |
+| Weighted F1 | 0.648 |
+| Balanced accuracy | 0.625 |
+| ROC AUC macro | 0.816 |
+
+Best tuned HistGradientBoosting parameters:
+
+```text
+model__learning_rate: 0.02
+model__max_iter: 500
+model__max_leaf_nodes: 45
+model__min_samples_leaf: 50
+model__l2_regularization: 0.01
+model__max_bins: 128
+```
+
 ## Target Classes
 
 | Class | Definition |
@@ -36,7 +59,7 @@ pip install -r requirements.txt
 jupyter notebook notebooks/project.ipynb
 ```
 
-The notebook should run in under 1 minute and does not require access to restricted MIMIC-IV data.
+The notebook should run in under 1 minute and does not require access to restricted MIMIC-IV data. The saved joblib model was created with scikit-learn `1.8.0`, so `requirements.txt` pins that version for reproducible loading.
 
 The `src/` files are included so the viewer can inspect the target definition, patient-level splitting, leakage checks, preprocessing, and model choice. The demo notebook does not depend on these files. Full retraining still requires the restricted source data.
 
