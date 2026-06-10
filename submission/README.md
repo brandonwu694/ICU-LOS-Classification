@@ -12,6 +12,10 @@ This package demonstrates a saved ICU length-of-stay classifier on synthetic exa
 | `models/icu_los_classifier_metadata.json` | Metadata describing the target, feature counts, feature window, and saved test metrics when available. |
 | `data/sample/icu_los_classification_sample.csv` | Small synthetic dataset that matches the model feature schema. It is for demo inference only. |
 | `data/sample/README.md` | Note describing the synthetic sample data. |
+| `src/data/target.py` | LOS category creation logic. |
+| `src/data/splitting.py` | Patient-level train/validation/test split utilities. |
+| `src/data/validation.py` | Leakage-column and split-integrity validation helpers. |
+| `src/models/pipeline.py` | Preprocessing and classifier pipeline definitions, including the selected HistGradientBoosting model. |
 | `requirements.txt` | Python packages needed to run the notebook. |
 
 ## Target Classes
@@ -32,6 +36,8 @@ jupyter notebook notebooks/project.ipynb
 ```
 
 The notebook should run in under 1 minute. It does not require access to restricted MIMIC-IV data.
+
+The `src/` files are included for transparency so the target definition, patient-level splitting, leakage checks, preprocessing, and model choice can be inspected. They are not required to run the demo notebook, and full retraining still requires the restricted source data.
 
 ## Restricted Data Note
 
