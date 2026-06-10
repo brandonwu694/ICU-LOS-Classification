@@ -1,6 +1,6 @@
 # ICU Length of Stay Classification
 
-This capstone project aims to predict ICU length-of-stay category from information available at ICU admission through the first 24 hours only.
+This capstone project predicts an ICU length-of-stay category using information available at ICU admission and during the first 24 ICU hours. The goal is to make the prediction early enough that it could support planning, while avoiding information from later in the stay.
 
 Target classes:
 
@@ -34,18 +34,18 @@ Target classes:
 
 ## Leakage Controls
 
-The pipeline splits by `subject_id` and asserts that no patient appears in more than one split. Features are restricted to admission-time values and ICU hour 0-24 aggregates. Outcome and future-information fields such as LOS, discharge/death timestamps, ICU `outtime`, and `last_careunit` are excluded from the feature matrix.
+The pipeline splits data by `subject_id`, so all ICU stays for the same patient stay in the same train, validation, or test split. It also checks that no patient appears in more than one split.
 
-Preprocessing, encoding, scaling, model fitting, and class-imbalance weighting are fit only on the training split.
+Features use only admission-time information and ICU hour 0-24 summaries. Fields that reveal the outcome or future care, such as LOS, discharge/death timestamps, ICU `outtime`, and `last_careunit`, are removed before modeling. Preprocessing, encoding, scaling, model fitting, and class-imbalance weighting are fit only on the training split.
 
 ## Feature Sources
 
-The default path can reuse `data/processed/modeling_dataset.parquet` when it exists, after filtering known leakage columns. The raw rebuild path creates the following first-24-hour feature groups:
+The default path can reuse `data/processed/modeling_dataset.parquet` when it exists and then filters known leakage columns. The raw rebuild path creates these first-24-hour feature groups:
 
 | Feature group | Examples | First-24-hour handling |
 | --- | --- | --- |
-| Admission context and demographics | age, sex, admission type, insurance, race, first ICU care unit, hospital-to-ICU time | Uses information available at ICU admission or immediately before ICU admission. |
-| Vitals from chart events | heart rate, blood pressure, respiratory rate, oxygen saturation, temperature-like charted measurements | Uses all numeric measurements recorded from ICU hour 0-24, then summarizes each common item with count, mean, minimum, and maximum. |
+| Admission context and demographics | age, sex, admission type, insurance, race, first ICU care unit, hospital-to-ICU time | Uses information known at or before ICU admission. |
+| Vitals from chart events | heart rate, blood pressure, respiratory rate, oxygen saturation, temperature-like charted measurements | Uses all numeric measurements from ICU hour 0-24, then summarizes each common item with count, mean, minimum, and maximum. |
 | Labs | creatinine, white blood cell count, hemoglobin, electrolytes, lactate-like lab measurements | Uses all numeric lab results charted from ICU hour 0-24, then summarizes each common item with count, mean, minimum, and maximum. |
 | Inputs | total input volume, input event count, unique input items, common input categories | Keeps input events started within ICU hour 0-24 and aggregates volumes/counts by stay. |
 | Outputs | total output volume, urine-related output, output event count, unique output items | Keeps output events charted within ICU hour 0-24 and aggregates volumes/counts by stay. |
@@ -53,7 +53,7 @@ The default path can reuse `data/processed/modeling_dataset.parquet` when it exi
 | Prescriptions | medication count, unique drugs, routes, broad medication categories | Keeps prescriptions started within ICU hour 0-24 and creates count/binary indicators. |
 | Radiology | note count, modality/body-region indicators, simple timestamp-safe keywords | Keeps radiology notes charted within ICU hour 0-24 and uses only simple indicators from those notes. |
 
-All time-stamped raw features are joined to ICU stays and filtered between ICU `intime` and `intime + 24 hours` before aggregation. Outcome and future-information fields are not used as predictors.
+All time-stamped raw rows are joined to ICU stays and filtered between ICU `intime` and `intime + 24 hours` before aggregation. Outcome and future-information fields are not used as predictors.
 
 ## Model Performance
 
@@ -82,25 +82,25 @@ python -m unittest discover -s tests -v
 
 ## Train The Classifier
 
-Use existing processed first-24-hour feature artifacts when available:
+Train from the processed first-24-hour modeling dataset when it is available:
 
 ```bash
 python scripts/train_best_model.py
 ```
 
-Build features directly from `data/raw/` instead:
+Rebuild features directly from `data/raw/` instead:
 
 ```bash
 python scripts/train_best_model.py --from-raw
 ```
 
-Optionally tune the HistGradientBoosting model on the training split with patient-group-aware cross-validation:
+Optionally tune the HistGradientBoosting model with patient-group-aware cross-validation on the training split:
 
 ```bash
 python scripts/train_best_model.py --tune-hgb --tuning-iterations 20
 ```
 
-Create a tiny synthetic demo model artifact:
+Create a small synthetic demo model artifact:
 
 ```bash
 python scripts/train_best_model.py --sample
@@ -113,7 +113,7 @@ models/icu_los_classifier.joblib
 models/icu_los_classifier_metadata.json
 ```
 
-Full-data model artifacts are generated locally and ignored by git. The repository keeps only the small synthetic sample model needed for the public demo.
+Generated comparison model artifacts can stay local to avoid pushing large files. The selected `icu_los_classifier.joblib` artifact is the model to include when sharing a runnable demo or submission.
 
 The training script also fits comparison models on the same patient-level split:
 
@@ -135,7 +135,7 @@ Reports are saved under:
 reports/classification/
 ```
 
-Metrics include macro F1, weighted F1, balanced accuracy, per-class precision/recall/F1/support, confusion matrix, and multiclass ROC AUC when probabilities are available. The model-level comparison is written to:
+Reports include macro F1, weighted F1, balanced accuracy, per-class precision/recall/F1/support, a confusion matrix, and multiclass ROC AUC when probabilities are available. The model-level comparison is written to:
 
 ```text
 reports/classification/model_comparison.csv
@@ -149,7 +149,7 @@ reports/classification/hgb_tuning_results.csv
 
 ## Run The Demo Notebook
 
-The public demo uses only synthetic data and should run in under 1 minute:
+The demo uses only synthetic data and should run in under 1 minute:
 
 ```bash
 jupyter notebook notebooks/project.ipynb
@@ -176,9 +176,9 @@ Run the performance and assumption-check notebook:
 jupyter notebook notebooks/model_performance_checks.ipynb
 ```
 
-This notebook summarizes saved model reports and checks patient-level split integrity, target labels, leakage-prone feature names, feature compatibility with the saved model, and prediction output shape.
+This notebook reviews saved model reports and checks patient-level split integrity, target labels, leakage-prone feature names, feature compatibility with the saved model, and prediction output shape.
 
-To validate the LOS category thresholds against an alternative `<=7`, `7-14`, `>14` day definition, run:
+To compare the selected LOS categories with an alternative `<=7`, `7-14`, `>14` day definition, run:
 
 ```bash
 jupyter notebook notebooks/los_category_validation.ipynb
@@ -186,4 +186,4 @@ jupyter notebook notebooks/los_category_validation.ipynb
 
 ## Restricted MIMIC-IV Data
 
-The full project requires restricted MIMIC-IV data from PhysioNet. These data are not included in this repository and must be obtained externally through PhysioNet credentialing and the required data-use agreement. After approval, place the source files locally under `data/raw/`.
+The full project uses restricted MIMIC-IV data from PhysioNet. These data are not included in this repository. They must be obtained through PhysioNet credentialing and the required data-use agreement. After approval, place the source files locally under `data/raw/`.

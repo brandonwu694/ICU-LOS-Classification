@@ -1,3 +1,3 @@
 # Synthetic Demo Data
 
-This CSV is fake data created only to demonstrate inference with the saved model. It matches the model feature schema but does not contain real MIMIC-IV patient records.
+This CSV is synthetic data for the demo notebook. It matches the saved model's feature schema but does not contain real MIMIC-IV patient records.
