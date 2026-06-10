@@ -1,0 +1,11 @@
+pandas
+numpy
+pyarrow
+scikit-learn
+joblib
+matplotlib
+seaborn
+jupyter
+notebook
+nbconvert
+ipython

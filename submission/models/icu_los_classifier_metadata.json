@@ -1,0 +1,23 @@
+{
+  "model_name": "icu_los_classifier",
+  "task": "three-class ICU length-of-stay classification",
+  "artifact": "models/icu_los_classifier.joblib",
+  "training_data": "Restricted MIMIC-IV-derived data from PhysioNet; not included in this submission.",
+  "demo_data": "Synthetic sample data generated to match the real model feature schema.",
+  "target_definition": {
+    "0": "LOS < 2 days",
+    "1": "2 <= LOS <= 7 days",
+    "2": "LOS > 7 days"
+  },
+  "feature_count": 380,
+  "numeric_feature_count": 368,
+  "categorical_feature_count": 12,
+  "feature_window": "ICU admission through first 24 hours only",
+  "test_metrics": {
+    "macro_f1": 0.5902319097728024,
+    "weighted_f1": 0.6402985568507089,
+    "balanced_accuracy": 0.6166020942176125,
+    "roc_auc_ovr_macro": 0.8139923137268302,
+    "roc_auc_ovr_weighted": 0.8070580784542051
+  }
+}

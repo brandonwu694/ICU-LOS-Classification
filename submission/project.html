@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ICU LOS Classification Demo</title>
+<style>
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 40px; line-height: 1.5; color: #1f2933; }
+h1, h2 { color: #0f172a; }
+pre { background: #f6f8fa; padding: 14px; border-radius: 6px; overflow-x: auto; }
+table { border-collapse: collapse; margin: 16px 0 28px; font-size: 14px; }
+th, td { border: 1px solid #d0d7de; padding: 8px 10px; text-align: right; }
+th { background: #f6f8fa; }
+td:first-child, th:first-child { text-align: left; }
+.note { color: #475569; }
+</style>
+</head>
+<body>
+<h1>ICU LOS Classification Demo</h1>
+<p class="note">This HTML export shows the outputs of the runnable demo notebook. The sample data are synthetic and the saved model was trained offline on restricted MIMIC-IV-derived data.</p>
+<h2>Load Model And Sample Data</h2>
+<pre>Loaded 24 synthetic demo rows
+Model expects 380 features
+Target labels: {0: &#x27;LOS &lt; 2 days&#x27;, 1: &#x27;2 &lt;= LOS &lt;= 7 days&#x27;, 2: &#x27;LOS &gt; 7 days&#x27;}
+</pre>
+<h2>Example Prediction Metrics</h2>
+<pre>Macro F1: 0.627
+Weighted F1: 0.630
+Balanced accuracy: 0.653
+
+Confusion matrix, rows=true and columns=predicted:
+[[5 1 0]
+ [3 5 0]
+ [2 3 5]]
+</pre>
+<h2>Prediction Examples</h2>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>subject_id</th>
+      <th>stay_id</th>
+      <th>los_category</th>
+      <th>predicted_los_category</th>
+      <th>prob_class_0</th>
+      <th>prob_class_1</th>
+      <th>prob_class_2</th>
+      <th>correct</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>900000</td>
+      <td>700000</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0.572</td>
+      <td>0.420</td>
+      <td>0.008</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <td>900001</td>
+      <td>700001</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0.866</td>
+      <td>0.134</td>
+      <td>0.001</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <td>900002</td>
+      <td>700002</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0.923</td>
+      <td>0.077</td>
+      <td>0.001</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <td>900003</td>
+      <td>700003</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0.951</td>
+      <td>0.048</td>
+      <td>0.001</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <td>900004</td>
+      <td>700004</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0.943</td>
+      <td>0.055</td>
+      <td>0.002</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <td>900005</td>
+      <td>700005</td>
+      <td>1</td>
+      <td>1</td>
+      <td>0.445</td>
+      <td>0.542</td>
+      <td>0.013</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <td>900006</td>
+      <td>700006</td>
+      <td>1</td>
+      <td>1</td>
+      <td>0.327</td>
+      <td>0.670</td>
+      <td>0.004</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <td>900007</td>
+      <td>700007</td>
+      <td>1</td>
+      <td>1</td>
+      <td>0.276</td>
+      <td>0.719</td>
+      <td>0.005</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <td>900008</td>
+      <td>700008</td>
+      <td>1</td>
+      <td>1</td>
+      <td>0.407</td>
+      <td>0.583</td>
+      <td>0.010</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <td>900009</td>
+      <td>700009</td>
+      <td>1</td>
+      <td>1</td>
+      <td>0.361</td>
+      <td>0.630</td>
+      <td>0.009</td>
+      <td>True</td>
+    </tr>
+  </tbody>
+</table>
+<h2>Per-Class Report</h2>
+<pre>                    precision    recall  f1-score   support
+
+      LOS &lt; 2 days       0.50      0.83      0.62         6
+2 &lt;= LOS &lt;= 7 days       0.56      0.62      0.59         8
+      LOS &gt; 7 days       1.00      0.50      0.67        10
+
+          accuracy                           0.62        24
+         macro avg       0.69      0.65      0.63        24
+      weighted avg       0.73      0.62      0.63        24
+</pre>
+<h2>Examples Sorted By Errors First</h2>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>subject_id</th>
+      <th>stay_id</th>
+      <th>los_category</th>
+      <th>predicted_los_category</th>
+      <th>prob_class_0</th>
+      <th>prob_class_1</th>
+      <th>prob_class_2</th>
+      <th>correct</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>900023</td>
+      <td>700023</td>
+      <td>0</td>
+      <td>1</td>
+      <td>0.286</td>
+      <td>0.708</td>
+      <td>0.006</td>
+      <td>False</td>
+    </tr>
+    <tr>
+      <td>900021</td>
+      <td>700021</td>
+      <td>2</td>
+      <td>0</td>
+      <td>0.363</td>
+      <td>0.355</td>
+      <td>0.282</td>
+      <td>False</td>
+    </tr>
+    <tr>
+      <td>900020</td>
+      <td>700020</td>
+      <td>2</td>
+      <td>1</td>
+      <td>0.112</td>
+      <td>0.594</td>
+      <td>0.293</td>
+      <td>False</td>
+    </tr>
+    <tr>
+      <td>900019</td>
+      <td>700019</td>
+      <td>2</td>
+      <td>1</td>
+      <td>0.112</td>
+      <td>0.646</td>
+      <td>0.242</td>
+      <td>False</td>
+    </tr>
+    <tr>
+      <td>900018</td>
+      <td>700018</td>
+      <td>2</td>
+      <td>1</td>
+      <td>0.288</td>
+      <td>0.445</td>
+      <td>0.267</td>
+      <td>False</td>
+    </tr>
+    <tr>
+      <td>900017</td>
+      <td>700017</td>
+      <td>1</td>
+      <td>0</td>
+      <td>0.919</td>
+      <td>0.080</td>
+      <td>0.001</td>
+      <td>False</td>
+    </tr>
+    <tr>
+      <td>900016</td>
+      <td>700016</td>
+      <td>1</td>
+      <td>0</td>
+      <td>0.558</td>
+      <td>0.435</td>
+      <td>0.008</td>
+      <td>False</td>
+    </tr>
+    <tr>
+      <td>900015</td>
+      <td>700015</td>
+      <td>1</td>
+      <td>0</td>
+      <td>0.949</td>
+      <td>0.044</td>
+      <td>0.007</td>
+      <td>False</td>
+    </tr>
+    <tr>
+      <td>900022</td>
+      <td>700022</td>
+      <td>2</td>
+      <td>0</td>
+      <td>0.433</td>
+      <td>0.397</td>
+      <td>0.169</td>
+      <td>False</td>
+    </tr>
+    <tr>
+      <td>900014</td>
+      <td>700014</td>
+      <td>2</td>
+      <td>2</td>
+      <td>0.161</td>
+      <td>0.415</td>
+      <td>0.424</td>
+      <td>True</td>
+    </tr>
+  </tbody>
+</table>
+</body>
+</html>

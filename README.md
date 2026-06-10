@@ -40,9 +40,20 @@ Preprocessing, encoding, scaling, model fitting, and class-imbalance weighting a
 
 ## Feature Sources
 
-The default path can reuse `data/processed/modeling_dataset.parquet` when it exists, after filtering known leakage columns. The raw rebuild path creates admission context, demographics, first-24-hour vitals/labs, input and output summaries, procedure indicators, prescription summaries, and timestamp-safe radiology-note indicators.
+The default path can reuse `data/processed/modeling_dataset.parquet` when it exists, after filtering known leakage columns. The raw rebuild path creates the following first-24-hour feature groups:
 
-All time-stamped raw features are joined to ICU stays and filtered between ICU `intime` and `intime + 24 hours` before aggregation.
+| Feature group | Examples | First-24-hour handling |
+| --- | --- | --- |
+| Admission context and demographics | age, sex, admission type, insurance, race, first ICU care unit, hospital-to-ICU time | Uses information available at ICU admission or immediately before ICU admission. |
+| Vitals from chart events | heart rate, blood pressure, respiratory rate, oxygen saturation, temperature-like charted measurements | Uses all numeric measurements recorded from ICU hour 0-24, then summarizes each common item with count, mean, minimum, and maximum. |
+| Labs | creatinine, white blood cell count, hemoglobin, electrolytes, lactate-like lab measurements | Uses all numeric lab results charted from ICU hour 0-24, then summarizes each common item with count, mean, minimum, and maximum. |
+| Inputs | total input volume, input event count, unique input items, common input categories | Keeps input events started within ICU hour 0-24 and aggregates volumes/counts by stay. |
+| Outputs | total output volume, urine-related output, output event count, unique output items | Keeps output events charted within ICU hour 0-24 and aggregates volumes/counts by stay. |
+| Procedures | procedure count, unique procedures, common procedure indicators | Keeps procedures started within ICU hour 0-24 and creates count/binary indicators. |
+| Prescriptions | medication count, unique drugs, routes, broad medication categories | Keeps prescriptions started within ICU hour 0-24 and creates count/binary indicators. |
+| Radiology | note count, modality/body-region indicators, simple timestamp-safe keywords | Keeps radiology notes charted within ICU hour 0-24 and uses only simple indicators from those notes. |
+
+All time-stamped raw features are joined to ICU stays and filtered between ICU `intime` and `intime + 24 hours` before aggregation. Outcome and future-information fields are not used as predictors.
 
 ## Model Performance
 
@@ -166,6 +177,12 @@ jupyter notebook notebooks/model_performance_checks.ipynb
 ```
 
 This notebook summarizes saved model reports and checks patient-level split integrity, target labels, leakage-prone feature names, feature compatibility with the saved model, and prediction output shape.
+
+To validate the LOS category thresholds against an alternative `<=7`, `7-14`, `>14` day definition, run:
+
+```bash
+jupyter notebook notebooks/los_category_validation.ipynb
+```
 
 ## Restricted MIMIC-IV Data
 
