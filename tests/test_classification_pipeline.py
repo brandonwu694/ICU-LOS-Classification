@@ -34,11 +34,15 @@ from src.models.pipeline import (
 
 
 class ClassificationPipelineTests(unittest.TestCase):
+    """Sanity checks for the ICU LOS classification workflow."""
+
     def test_los_category_boundaries(self) -> None:
+        """LOS values are mapped to the expected three target classes."""
         df = add_los_category(pd.DataFrame({"los": [1.99, 2.0, 7.0, 7.01]}))
         self.assertEqual(df[TARGET_COLUMN].tolist(), [0, 1, 1, 2])
 
     def test_patient_level_split_integrity(self) -> None:
+        """Patient-level splitting keeps each subject in only one split."""
         df = pd.DataFrame(
             {
                 "subject_id": [1, 1, 2, 3, 4, 5, 6, 7, 8, 9],
@@ -50,16 +54,19 @@ class ClassificationPipelineTests(unittest.TestCase):
         assert_patient_split_integrity(df.assign(split=split))
 
     def test_patient_level_split_rejects_overlap(self) -> None:
+        """The split checker raises an error when a patient appears twice."""
         df = pd.DataFrame({"subject_id": [1, 1, 2], "split": ["train", "test", "train"]})
         with self.assertRaises(AssertionError):
             assert_patient_split_integrity(df)
 
     def test_no_leakage_columns_in_features(self) -> None:
+        """Known outcome and future-information columns are rejected."""
         assert_no_leakage_columns(["anchor_age", "heart_rate_mean_24h", "first_careunit"])
         with self.assertRaises(AssertionError):
             assert_no_leakage_columns(["anchor_age", "los", "last_careunit", "dischtime"])
 
     def test_first_24h_event_filter_and_assertion(self) -> None:
+        """Timestamped events are limited to ICU hour 0 through hour 24."""
         stays = pd.DataFrame(
             {
                 "stay_id": [10],
@@ -84,6 +91,7 @@ class ClassificationPipelineTests(unittest.TestCase):
             assert_events_within_first_24h(events, stays, "charttime")
 
     def test_matching_train_test_feature_columns_after_preprocessing(self) -> None:
+        """Train and test rows keep the same feature schema after preprocessing."""
         df = make_sample_dataset()
         feature_cols = [
             col
@@ -102,6 +110,7 @@ class ClassificationPipelineTests(unittest.TestCase):
         assert_matching_feature_columns(feature_cols, list(test[feature_cols].columns))
 
     def test_baseline_models_fit_on_same_feature_matrix(self) -> None:
+        """Baseline models fit and predict on the same feature matrix."""
         df = make_sample_dataset()
         feature_cols = [
             col
@@ -125,6 +134,7 @@ class ClassificationPipelineTests(unittest.TestCase):
         self.assertEqual(len(random_forest.predict(test[feature_cols])), len(test))
 
     def test_group_aware_hgb_tuning_returns_fitted_pipeline(self) -> None:
+        """HistGradientBoosting tuning returns a fitted patient-aware pipeline."""
         df = make_sample_dataset()
         feature_cols = [
             col
@@ -154,6 +164,7 @@ class ClassificationPipelineTests(unittest.TestCase):
         self.assertTrue(best_params)
 
     def test_unused_raw_sources_build_first24h_stay_level_features(self) -> None:
+        """Added raw source builders return one first-24-hour row per stay."""
         with tempfile.TemporaryDirectory() as tmp:
             raw_dir = Path(tmp)
             base = _write_minimal_raw_fixture(raw_dir)
@@ -192,6 +203,7 @@ class ClassificationPipelineTests(unittest.TestCase):
             self.assertEqual(radiology_features.loc[10, "radiology_mentions_line_or_tube_24h"], 1)
 
     def test_raw_rebuild_with_added_sources_remains_model_ready(self) -> None:
+        """Raw feature rebuilds include added sources and stay model-ready."""
         with tempfile.TemporaryDirectory() as tmp:
             raw_dir = Path(tmp)
             _write_minimal_raw_fixture(raw_dir)
@@ -214,6 +226,7 @@ if __name__ == "__main__":
 
 
 def _write_minimal_raw_fixture(raw_dir: Path) -> pd.DataFrame:
+    """Write a small raw-data fixture with in-window and out-of-window rows."""
     icu = pd.DataFrame(
         {
             "subject_id": [1, 2, 3, 4],
