@@ -59,10 +59,6 @@ pip install -r requirements.txt
 jupyter notebook notebooks/project.ipynb
 ```
 
-The notebook should run in under 1 minute and does not require access to restricted MIMIC-IV data. The saved joblib model was created with scikit-learn `1.8.0`, so `requirements.txt` pins that version for reproducible loading.
-
-The `src/` files are included so the viewer can inspect the target definition, patient-level splitting, leakage checks, preprocessing, and model choice. The demo notebook does not depend on these files. Full retraining still requires the restricted source data.
-
 ## Restricted Data Note
 
 The full training data are restricted MIMIC-IV data from PhysioNet and require credentialing plus a data-use agreement. They are intentionally excluded from this submission. The included CSV is synthetic and is only used to show model inference.
